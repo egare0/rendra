@@ -1,0 +1,13 @@
+[package]
+name = "rendra"
+version = "0.1.0"
+edition = "2024"
+description = "A high-level, ergonomic rendering abstraction over wgpu."
+license = "MIT"
+authors = ["Ceyhun"]
+repository = "https://github.com/egare0/rendra"
+
+[dependencies]
+pollster = "0.4"
+wgpu = "29.0"
+glam = "0.33"
