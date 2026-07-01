@@ -2,10 +2,12 @@
 
 mod error;
 mod renderer;
+mod color;
 
 pub mod raw;
 
-pub use renderer::{Renderer, RendererBuilder};
+pub use color::Color;
+pub use renderer::{Renderer, RendererBuilder, Frame};
 pub use error::RendraError;
 
 /// Shortcut for `Renderer::builder()`.

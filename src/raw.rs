@@ -1,4 +1,4 @@
-use crate::Renderer;
+use crate::{Frame, Renderer};
 
 pub trait RawAccess {
     fn raw_device(&self) -> &wgpu::Device;
@@ -26,5 +26,22 @@ impl RawAccess for Renderer {
     #[inline]
     fn raw_config(&self) -> &wgpu::SurfaceConfiguration {
         &self.config
+    }
+}
+
+pub trait RawFrameAccess {
+    fn raw_encoder(&mut self) -> &mut wgpu::CommandEncoder;
+    fn raw_view(&self) -> &wgpu::TextureView;
+}
+
+impl RawFrameAccess for Frame {
+    #[inline]
+    fn raw_encoder(&mut self) -> &mut wgpu::CommandEncoder {
+        &mut self.encoder
+    }
+
+    #[inline]
+    fn raw_view(&self) -> &wgpu::TextureView {
+        &self.view
     }
 }

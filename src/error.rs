@@ -8,4 +8,6 @@ pub enum RendraError {
     DeviceRequestFailed(String),
     #[error("Failed to create rendering surface: {0}")]
     SurfaceCreationFailed(String),
+    #[error("Surface operation failed: {0}")]
+    SurfaceError(String),
 }

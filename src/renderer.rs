@@ -1,4 +1,4 @@
-use crate::RendraError;
+use crate::{Color, RendraError};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use std::sync::Arc;
 
@@ -14,6 +14,73 @@ impl Renderer {
     #[must_use]
     pub fn builder() -> RendererBuilder {
         RendererBuilder::default()
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        if width > 0 && height > 0 {
+            self.config.width = width;
+            self.config.height = height;
+            self.surface.configure(&self.device, &self.config);
+        }
+    }
+
+    pub fn render(&mut self, render_pass: impl FnOnce(&mut Frame)) -> Result<(), RendraError> {
+        let surface_texture = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(texture) => texture,
+            wgpu::CurrentSurfaceTexture::Suboptimal(texture) => {
+                self.surface.configure(&self.device, &self.config);
+                texture
+            }
+            wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
+                return Ok(());
+            }
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                self.surface.configure(&self.device, &self.config);
+                return Ok(());
+            }
+            wgpu::CurrentSurfaceTexture::Validation => {
+                return Err(RendraError::SurfaceError("Validation error".to_string()));
+            }
+        };
+
+        let view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Rendra Command Encoder"),
+        });
+        let mut frame = Frame { view, encoder };
+
+        render_pass(&mut frame);
+
+        self.queue.submit(std::iter::once(frame.encoder.finish()));
+        surface_texture.present();
+
+        Ok(())
+    }
+}
+
+pub struct Frame {
+    pub(crate) view: wgpu::TextureView,
+    pub(crate) encoder: wgpu::CommandEncoder,
+}
+
+impl Frame {
+    pub fn clear(&mut self, color: Color) {
+        let _pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Clear Pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &self.view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(color.into()),
+                    store: wgpu::StoreOp::Store
+                }
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
     }
 }
 
