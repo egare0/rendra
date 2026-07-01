@@ -8,7 +8,7 @@ mod color;
 pub mod raw;
 
 pub use color::Color;
-pub use common::Device;
+pub use common::{Device, Surface};
 pub use renderer::{Renderer, RendererBuilder, Frame};
 pub use error::RendraError;
 
