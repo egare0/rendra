@@ -13,3 +13,6 @@ wgpu = "29.0"
 glam = "0.33"
 thiserror = "2.0"
 raw-window-handle = "0.6"
+
+[dev-dependencies]
+winit = "0.30"
