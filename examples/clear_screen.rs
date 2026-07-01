@@ -22,7 +22,7 @@ impl ApplicationHandler for App {
             .with_inner_size(winit::dpi::PhysicalSize::new(800, 600));
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
 
-        let device = pollster::block_on(Device::new()).expect("Failed to initialize Device");
+        let device = Device::new().expect("Failed to initialize Device");
         let surface = Surface::new(&device, window.clone(), 800, 600, true).expect("Failed to create Surface");
         let renderer = Renderer::new(&device);
 

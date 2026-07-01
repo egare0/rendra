@@ -14,11 +14,21 @@ pub struct Device {
 }
 
 impl Device {
-    /// Initializes the GPU connection.
+    /// Initializes the GPU connection, blocking the current thread until
+    /// it's ready.
+    ///
+    /// This is the entry point for most applications. If you're already
+    /// inside an async runtime and want to await initialization instead
+    /// of blocking a thread, use [`Device::new_async`] instead.
+    pub fn new() -> Result<Self, RendraError> {
+        pollster::block_on(Self::new_async())
+    }
+
+    /// Initializes the GPU connection asynchronously.
     ///
     /// Picks a high-performance adapter and requests a device with default
     /// limits and no extra features enabled.
-    pub async fn new() -> Result<Self, RendraError> {
+    pub async fn new_async() -> Result<Self, RendraError> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             flags: wgpu::InstanceFlags::empty(),
