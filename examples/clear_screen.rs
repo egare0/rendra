@@ -1,15 +1,17 @@
-use rendra::{Color, Renderer};
+use rendra::{Color, Device, Renderer, Surface};
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
-    event_loop::{ControlFlow, EventLoop, ActiveEventLoop},
+    event_loop::{ActiveEventLoop, EventLoop, ControlFlow},
     window::{Window, WindowId}
 };
 
 #[derive(Default)]
 pub struct App {
     window: Option<Arc<Window>>,
+    device: Option<Device>,
+    surface: Option<Surface>,
     renderer: Option<Renderer>
 }
 
@@ -19,12 +21,14 @@ impl ApplicationHandler for App {
             .with_title("Rendra - Clear Screen Test")
             .with_inner_size(winit::dpi::PhysicalSize::new(800, 600));
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
-        let renderer = rendra::builder()
-            .with_vsync(true)
-            .build(window.clone(), 800, 600)
-            .expect("Failed to initialize Rendra");
+
+        let device = pollster::block_on(Device::new()).expect("Failed to initialize Device");
+        let surface = Surface::new(&device, window.clone(), 800, 600, true).expect("Failed to create Surface");
+        let renderer = Renderer::new(&device);
 
         self.window = Some(window);
+        self.device = Some(device);
+        self.surface = Some(surface);
         self.renderer = Some(renderer);
     }
 
@@ -34,15 +38,15 @@ impl ApplicationHandler for App {
                 event_loop.exit();
             }
             WindowEvent::Resized(size) => {
-                if let Some(renderer) = self.renderer.as_mut() {
-                    renderer.resize(size.width, size.height);
+                if let (Some(device), Some(surface)) = (self.device.as_ref(), self.surface.as_mut()) {
+                    surface.resize(device, size.width, size.height);
                 }
             }
             WindowEvent::RedrawRequested => {
-                if let Some(renderer) = self.renderer.as_mut() {
-                    renderer.render(|frame| {
-                        frame.clear(Color::BLACK)
-                    }).unwrap();
+                if let (Some(renderer), Some(surface)) = (self.renderer.as_mut(), self.surface.as_mut()) {
+                    renderer.render(surface, |frame| {
+                            frame.clear(Color::BLACK);
+                        }).unwrap();
                 }
             }
             _ => {}
