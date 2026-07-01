@@ -1,26 +1,31 @@
-use crate::{Frame, Renderer};
+use crate::{Device, Frame, Surface};
 
-pub trait RawAccess {
+pub trait RawDeviceAccess {
     fn raw_device(&self) -> &wgpu::Device;
     fn raw_queue(&self) -> &wgpu::Queue;
-    fn raw_surface(&self) -> &wgpu::Surface<'static>;
-    fn raw_config(&self) -> &wgpu::SurfaceConfiguration;
 }
 
-impl RawAccess for Renderer {
+impl RawDeviceAccess for Device {
     #[inline]
     fn raw_device(&self) -> &wgpu::Device {
-        &self.device
+        &self.handle
     }
 
     #[inline]
     fn raw_queue(&self) -> &wgpu::Queue {
         &self.queue
     }
+}
 
+pub trait RawSurfaceAccess {
+    fn raw_surface(&self) -> &wgpu::Surface<'static>;
+    fn raw_config(&self) -> &wgpu::SurfaceConfiguration;
+}
+
+impl RawSurfaceAccess for Surface {
     #[inline]
     fn raw_surface(&self) -> &wgpu::Surface<'static> {
-        &self.surface
+        &self.handle
     }
 
     #[inline]

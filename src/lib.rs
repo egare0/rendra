@@ -2,19 +2,10 @@
 
 mod common;
 mod error;
-mod renderer;
 mod color;
 
 pub mod raw;
 
 pub use color::Color;
-pub use common::{Device, Surface};
-pub use renderer::{Renderer, RendererBuilder, Frame};
+pub use common::{Device, Surface, Renderer, Frame};
 pub use error::RendraError;
-
-/// Shortcut for `Renderer::builder()`.
-#[inline]
-#[must_use]
-pub fn builder() -> RendererBuilder {
-    Renderer::builder()
-}
