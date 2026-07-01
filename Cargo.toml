@@ -7,6 +7,11 @@ license = "MIT"
 authors = ["Ceyhun"]
 repository = "https://github.com/egare0/rendra"
 
+[features]
+default = ["3d", "2d"]
+3d = []
+2d = []
+
 [dependencies]
 pollster = "0.4"
 wgpu = "29.0"
