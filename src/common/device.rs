@@ -9,7 +9,7 @@ use crate::RendraError;
 pub struct Device {
     pub(crate) instance: wgpu::Instance,
     pub(crate) adapter: wgpu::Adapter,
-    pub(crate) device: wgpu::Device,
+    pub(crate) handle: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
 }
 
@@ -43,7 +43,7 @@ impl Device {
         Ok(Self {
             instance,
             adapter,
-            device,
+            handle: device,
             queue
         })
     }
