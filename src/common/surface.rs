@@ -42,4 +42,18 @@ impl Surface {
             self.handle.configure(&device.handle, &self.config);
         }
     }
+
+    /// Current swapchain width in pixels.
+    #[inline]
+    #[must_use]
+    pub fn width(&self) -> u32 {
+        self.config.width
+    }
+
+    /// Current swapchain height in pixels.
+    #[inline]
+    #[must_use]
+    pub fn height(&self) -> u32 {
+        self.config.height
+    }
 }
