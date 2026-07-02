@@ -10,4 +10,6 @@ pub enum RendraError {
     SurfaceCreationFailed(String),
     #[error("Surface operation failed: {0}")]
     SurfaceError(String),
+    #[error("Mesh has no vertices or no indices")]
+    EmptyMesh,
 }

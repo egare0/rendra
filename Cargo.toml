@@ -15,9 +15,10 @@ default = ["3d", "2d"]
 [dependencies]
 pollster = "0.4"
 wgpu = "30.0"
-glam = "0.33"
+glam = { version = "0.33", features = ["bytemuck"] }
 thiserror = "2.0"
 raw-window-handle = "0.6"
+bytemuck = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 winit = "0.30"
