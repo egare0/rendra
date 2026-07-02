@@ -58,7 +58,7 @@ impl Renderer {
         draw(&mut frame);
 
         self.queue.submit(std::iter::once(frame.encoder.finish()));
-        surface_texture.present();
+        self.queue.present(surface_texture);
 
         Ok(())
     }
