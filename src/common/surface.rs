@@ -2,13 +2,40 @@ use crate::{Device, RendraError};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use std::sync::Arc;
 
-/// A window's swapchain: the wgpu surface plus its current configuration.
+struct DepthAttachment {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+}
+
+fn create_depth_attachment(device: &wgpu::Device, width: u32, height: u32) -> DepthAttachment {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Rendra Depth Texture"),
+        size: wgpu::Extent3d {
+            width: width.max(1),
+            height: height.max(1),
+            depth_or_array_layers: 1
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Depth32Float,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[]
+    });
+
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    DepthAttachment { texture, view }
+}
+
+/// A window's swapchain: the wgpu surface, its configuration, and an
+/// optional depth buffer.
 ///
 /// Create one `Surface` per window and share a single `Device` across all
 /// of them. Build one with [`Surface::builder`].
 pub struct Surface {
     pub(crate) handle: wgpu::Surface<'static>,
     pub(crate) config: wgpu::SurfaceConfiguration,
+    depth: Option<DepthAttachment>,
 }
 
 impl Surface {
@@ -21,6 +48,7 @@ impl Surface {
             width,
             height,
             vsync: true,
+            depth: false
         }
     }
 
@@ -47,6 +75,10 @@ impl Surface {
     pub fn height(&self) -> u32 {
         self.config.height
     }
+
+    pub(crate) fn depth_view(&self) -> Option<&wgpu::TextureView> {
+        self.depth.as_ref().map(|d| &d.view)
+    }
 }
 
 /// Builds a [`Surface`] with optional settings.
@@ -55,6 +87,7 @@ pub struct SurfaceBuilder<W> {
     width: u32,
     height: u32,
     vsync: bool,
+    depth: bool
 }
 
 impl<W: HasWindowHandle + HasDisplayHandle + Send + Sync + 'static> SurfaceBuilder<W> {
@@ -65,6 +98,16 @@ impl<W: HasWindowHandle + HasDisplayHandle + Send + Sync + 'static> SurfaceBuild
         self.vsync = vsync;
         self
     }
+
+    /// Enables or disables a depth buffer (`Depth32Float`). Defaults to
+    /// disabled - turn it on for 3D rendering, leave it off for 2D.
+    #[inline]
+    #[must_use]
+    pub fn depth(mut self, depth: bool) -> Self {
+        self.depth = depth;
+        self
+    }
+
 
     /// Creates the surface.
     pub fn build(self, device: &Device) -> Result<Surface, RendraError> {
@@ -92,6 +135,14 @@ impl<W: HasWindowHandle + HasDisplayHandle + Send + Sync + 'static> SurfaceBuild
 
         surface.configure(&device.handle, &config);
 
-        Ok(Surface { handle: surface, config })
+        let depth = self.depth.then(|| {
+            create_depth_attachment(&device.handle, self.width.max(1), self.height.max(1))
+        });
+
+        Ok(Surface {
+            handle: surface,
+            config,
+            depth
+        })
     }
 }

@@ -23,7 +23,11 @@ impl ApplicationHandler for App {
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
 
         let device = Device::new().expect("Failed to initialize Device");
-        let surface = Surface::new(&device, window.clone(), 800, 600, true).expect("Failed to create Surface");
+        let surface = Surface::builder(window.clone(), 800, 600)
+            .vsync(true)
+            .depth(true)
+            .build(&device)
+            .expect("Failed to create Surface");
         let renderer = Renderer::new(&device);
 
         self.window = Some(window);

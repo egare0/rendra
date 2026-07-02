@@ -50,10 +50,11 @@ impl Renderer {
         };
 
         let view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let depth_view = surface.depth_view().cloned();
         let encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Rendra Command Encoder"),
         });
-        let mut frame = Frame { view, encoder };
+        let mut frame = Frame { view, depth_view, encoder };
 
         draw(&mut frame);
 
@@ -64,15 +65,27 @@ impl Renderer {
     }
 }
 
-/// One frame's worth of drawing state: a target view and a command encoder.
+/// One frame's worth of drawing state: a target view, an optional depth
+/// view, and a command encoder.
 pub struct Frame {
     pub(crate) view: wgpu::TextureView,
+    pub(crate) depth_view: Option<wgpu::TextureView>,
     pub(crate) encoder: wgpu::CommandEncoder,
 }
 
 impl Frame {
-    /// Clears the frame to a solid color.
+    /// Clears the frame to a solid color, and clears the depth buffer to
+    /// 1.0 if the surface has one.
     pub fn clear(&mut self, color: Color) {
+        let depth_stencil_attachment = self.depth_view.as_ref().map(|view| wgpu::RenderPassDepthStencilAttachment {
+            view,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(1.0),
+                store: wgpu::StoreOp::Store
+            }),
+            stencil_ops: None,
+        });
+
         let _pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Clear Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -84,7 +97,7 @@ impl Frame {
                     store: wgpu::StoreOp::Store
                 }
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment,
             timestamp_writes: None,
             occlusion_query_set: None,
             multiview_mask: None
