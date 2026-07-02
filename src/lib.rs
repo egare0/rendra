@@ -4,6 +4,9 @@ mod common;
 mod error;
 mod color;
 
+#[cfg(feature = "3d")]
+pub mod render3d;
+
 pub mod raw;
 
 pub use color::Color;
