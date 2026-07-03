@@ -11,6 +11,7 @@ repository = "https://github.com/egare0/rendra"
 default = ["3d", "2d"]
 3d = []
 2d = []
+image = ["dep:image"]
 
 [dependencies]
 pollster = "0.4"
@@ -19,6 +20,7 @@ glam = { version = "0.33", features = ["bytemuck"] }
 thiserror = "2.0"
 raw-window-handle = "0.6"
 bytemuck = { version = "1", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"], optional = true }
 
 [dev-dependencies]
 winit = "0.30"

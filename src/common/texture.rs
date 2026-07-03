@@ -46,6 +46,31 @@ impl Texture {
             srgb: true
         }
     }
+
+    /// Loads and decodes an image file from disk, then uploads it as a
+    /// texture with default settings (linear filtering, sRGB). Requires
+    /// the `image` feature.
+    ///
+    /// For control over filtering or color space, decode yourself and use
+    /// [`Texture::builder`] instead.
+    #[cfg(feature = "image")]
+    pub fn from_file<P: AsRef<std::path::Path>>(device: &Device, path: P) -> Result<Self, RendraError> {
+        let bytes = std::fs::read(path).map_err(|err| RendraError::ImageReadFailed(err.to_string()))?;
+        Self::from_bytes(device, &bytes)
+    }
+
+    /// Decodes an already-loaded image (PNG or JPEG) and uploads it as a
+    /// texture with default settings. Requires the `image` feature.
+    #[cfg(feature = "image")]
+    pub fn from_bytes(device: &Device, bytes: &[u8]) -> Result<Self, RendraError> {
+        use image::GenericImageView;
+
+        let decoded = image::load_from_memory(bytes).map_err(|err| RendraError::ImageDecodeFailed(err.to_string()))?;
+        let rgba = decoded.to_rgba8();
+        let (width, height) = rgba.dimensions();
+
+        Texture::builder(width, height, &rgba).build(device)
+    }
 }
 
 /// Builds [`Texture`] with optional filtering and color-space settings.
