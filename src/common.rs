@@ -8,6 +8,7 @@ mod surface;
 mod renderer;
 mod error;
 mod color;
+mod texture;
 
 pub mod raw;
 
@@ -16,3 +17,4 @@ pub use surface::Surface;
 pub use renderer::{Frame, Renderer};
 pub use error::RendraError;
 pub use color::Color;
+pub use texture::{Texture, TextureBuilder, Filter};

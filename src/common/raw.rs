@@ -1,4 +1,4 @@
-use crate::{Device, Frame, Surface};
+use crate::{Device, Frame, Surface, Texture};
 
 pub trait RawDeviceAccess {
     fn raw_device(&self) -> &wgpu::Device;
@@ -48,5 +48,28 @@ impl RawFrameAccess for Frame {
     #[inline]
     fn raw_view(&self) -> &wgpu::TextureView {
         &self.view
+    }
+}
+
+pub trait RawTextureAccess {
+    fn raw_texture(&self) -> &wgpu::Texture;
+    fn raw_view(&self) -> &wgpu::TextureView;
+    fn raw_sampler(&self) -> &wgpu::Sampler;
+}
+
+impl RawTextureAccess for Texture {
+    #[inline]
+    fn raw_texture(&self) -> &wgpu::Texture {
+        &self.texture
+    }
+
+    #[inline]
+    fn raw_view(&self) -> &wgpu::TextureView {
+        &self.view
+    }
+
+    #[inline]
+    fn raw_sampler(&self) -> &wgpu::Sampler {
+        &self.sampler
     }
 }

@@ -12,4 +12,6 @@ pub enum RendraError {
     SurfaceError(String),
     #[error("Mesh has no vertices or no indices")]
     EmptyMesh,
+    #[error("Texture data length {actual} does not match expected length {expected} (width * height * 4)")]
+    InvalidTextureData { expected: usize, actual: usize },
 }
