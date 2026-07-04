@@ -48,9 +48,7 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 if let (Some(renderer), Some(surface)) = (self.renderer.as_mut(), self.surface.as_mut()) {
-                    renderer.render(surface, |frame| {
-                            frame.clear(Color::BLACK);
-                        }).unwrap();
+                    renderer.render(surface, Some(Color::BLACK), |_frame| Ok(())).unwrap();
                 }
             }
             _ => {}

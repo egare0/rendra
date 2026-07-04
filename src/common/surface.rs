@@ -79,6 +79,12 @@ impl Surface {
     pub(crate) fn depth_view(&self) -> Option<&wgpu::TextureView> {
         self.depth.as_ref().map(|d| &d.view)
     }
+
+    /// The swapchain's color format. `Material` needs this to build a
+    /// pipeline that targets this surface.
+    pub(crate) fn color_format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
 }
 
 /// Builds a [`Surface`] with optional settings.

@@ -34,20 +34,14 @@ impl RawSurfaceAccess for Surface {
     }
 }
 
-pub trait RawFrameAccess {
-    fn raw_encoder(&mut self) -> &mut wgpu::CommandEncoder;
-    fn raw_view(&self) -> &wgpu::TextureView;
+pub trait RawFrameAccess<'a> {
+    fn raw_pass(&mut self) -> &mut wgpu::RenderPass<'a>;
 }
 
-impl RawFrameAccess for Frame {
+impl<'a> RawFrameAccess<'a> for Frame<'a> {
     #[inline]
-    fn raw_encoder(&mut self) -> &mut wgpu::CommandEncoder {
-        &mut self.encoder
-    }
-
-    #[inline]
-    fn raw_view(&self) -> &wgpu::TextureView {
-        &self.view
+    fn raw_pass(&mut self) -> &mut wgpu::RenderPass<'a> {
+        &mut self.pass
     }
 }
 

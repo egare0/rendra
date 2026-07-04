@@ -9,6 +9,7 @@ mod renderer;
 mod error;
 mod color;
 mod texture;
+mod layouts;
 
 pub mod raw;
 
