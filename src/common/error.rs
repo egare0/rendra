@@ -22,4 +22,7 @@ pub enum RendraError {
     #[cfg(feature = "image")]
     #[error("Failed to decode image: {0}")]
     ImageDecodeFailed(String),
+
+    #[error("Too many draw calls with distinct transforms in one frame (max 1024)")]
+    TooManyDraws
 }

@@ -17,3 +17,4 @@ pub use renderer::{Frame, Renderer};
 pub use error::RendraError;
 pub use color::Color;
 pub use texture::{Filter, Texture, TextureBuilder};
+pub(crate) use renderer::OBJECT_CAPACITY;
