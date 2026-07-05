@@ -4,6 +4,8 @@
 
 mod viewport;
 mod mesh;
+mod material;
 
 pub use viewport::Viewport3D;
 pub use mesh::{Mesh, MeshBuilder, Vertex};
+pub use material::{Material, MaterialBuilder};

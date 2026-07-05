@@ -9,7 +9,7 @@ mod renderer;
 mod error;
 mod color;
 mod texture;
-mod layouts;
+pub(crate) mod layouts;
 
 pub use device::Device;
 pub use surface::Surface;
