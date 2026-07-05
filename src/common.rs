@@ -11,11 +11,9 @@ mod color;
 mod texture;
 mod layouts;
 
-pub mod raw;
-
 pub use device::Device;
 pub use surface::Surface;
 pub use renderer::{Frame, Renderer};
 pub use error::RendraError;
 pub use color::Color;
-pub use texture::{Texture, TextureBuilder, Filter};
+pub use texture::{Filter, Texture, TextureBuilder};

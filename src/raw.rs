@@ -1,3 +1,5 @@
+//! Escape hatch for reaching the underlying wgpu types directly.
+
 use crate::{Device, Frame, Surface, Texture};
 
 pub trait RawDeviceAccess {

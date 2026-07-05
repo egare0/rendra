@@ -1,7 +1,9 @@
 //! `rendra` is a high-level, ergonomic rendering abstraction over wgpu.
 
 mod common;
-pub use common::{Device, Frame, Renderer, Surface, RendraError, Color, Texture, TextureBuilder, Filter, raw};
+pub use common::{Color, Device, Filter, Frame, Renderer, RendraError, Surface, Texture, TextureBuilder};
+
+pub mod raw;
 
 #[cfg(feature = "3d")]
 pub mod render3d;
