@@ -3,8 +3,8 @@ use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
-    event_loop::{ActiveEventLoop, EventLoop, ControlFlow},
-    window::{Window, WindowId}
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::{Window, WindowId},
 };
 
 #[derive(Default)]
@@ -12,20 +12,18 @@ pub struct App {
     window: Option<Arc<Window>>,
     device: Option<Device>,
     surface: Option<Surface>,
-    renderer: Option<Renderer>
+    renderer: Option<Renderer>,
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attrs = Window::default_attributes()
-            .with_title("Rendra - Clear Screen Test")
+            .with_title("Rendra - Clear Screen")
             .with_inner_size(winit::dpi::PhysicalSize::new(800, 600));
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
 
         let device = Device::new().expect("Failed to initialize Device");
         let surface = Surface::builder(window.clone(), 800, 600)
-            .vsync(true)
-            .depth(true)
             .build(&device)
             .expect("Failed to create Surface");
         let renderer = Renderer::new(&device);
@@ -36,11 +34,9 @@ impl ApplicationHandler for App {
         self.renderer = Some(renderer);
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent, ) {
         match event {
-            WindowEvent::CloseRequested => {
-                event_loop.exit();
-            }
+            WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => {
                 if let (Some(device), Some(surface)) = (self.device.as_ref(), self.surface.as_mut()) {
                     surface.resize(device, size.width, size.height);
