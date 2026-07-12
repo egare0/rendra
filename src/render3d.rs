@@ -2,8 +2,10 @@
 //!
 //! Everything here requires the `3d` feature, which is enabled by default.
 
+mod material;
 mod mesh;
 mod shader;
 
+pub use material::{Material, MaterialBuilder};
 pub use mesh::{Mesh, MeshBuilder, Vertex};
 pub use shader::{Shader, ShaderBuilder};
