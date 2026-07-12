@@ -24,5 +24,9 @@ pub enum RendraError {
     ImageDecodeFailed(String),
 
     #[error("Too many draw calls with distinct transforms in one frame (max 1024)")]
-    TooManyDraws
+    TooManyDraws,
+    #[error("texture slot '{0}' is declared more than once")]
+    DuplicateTextureSlot(String),
+    #[error("shader has no texture slot named '{0}'")]
+    UnknownTextureSlot(String),
 }
