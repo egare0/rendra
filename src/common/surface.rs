@@ -85,6 +85,12 @@ impl Surface {
     pub(crate) fn color_format(&self) -> wgpu::TextureFormat {
         self.config.format
     }
+
+    /// Whether this surface was built with a depth buffer. Pipelines
+    /// targeting this surface have to match.
+    pub(crate) fn depth_enabled(&self) -> bool {
+        self.depth.is_some()
+    }
 }
 
 /// Builds a [`Surface`] with optional settings.

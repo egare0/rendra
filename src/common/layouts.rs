@@ -1,39 +1,42 @@
-//! Shared bind group layouts used by both the core renderer and render3d's
-//! Material. wgpu compares explicitly-created bind group layouts
-//! structurally, so Renderer and Material don't need to share the same
-//! Rust object here - just the same shape.
+//! Shared bind group layouts. wgpu compares explicitly-created layouts
+//! structurally, so Renderer and Material can each create their own copy
+//! of these and the resulting pipelines and bind groups stay compatible.
 
-/// Group 0: per-frame camera data (a single view-projection matrix).
-pub(crate) fn camera_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+/// Group 0: frame globals - light data, written once per frame.
+pub(crate) fn frame_globals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Rendra Camera Bind Group Layout"),
+        label: Some("Rendra Frame Globals Layout"),
         entries: &[wgpu::BindGroupLayoutEntry {
             binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX,
+            visibility: wgpu::ShaderStages::FRAGMENT,
             ty: wgpu::BindingType::Buffer {
                 ty: wgpu::BufferBindingType::Uniform,
                 has_dynamic_offset: false,
-                min_binding_size: None
-            },
-            count: None
-        }]
-    })
-}
-
-/// Group 2: per-object data (a model matrix). One shared buffer, a
-/// different slice of it per draw call via a dynamic offset.
-pub(crate) fn object_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Rendra Object Bind Group Layout"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: true,
                 min_binding_size: None,
             },
             count: None,
         }],
     })
 }
+
+/// Group 2: per-draw data - a model matrix and a view-projection matrix,
+/// one 128-byte slice of a shared buffer per draw call, selected with a
+/// dynamic offset.
+pub(crate) fn per_draw_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("Rendra Per-Draw Layout"),
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::VERTEX,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: true,
+                min_binding_size: wgpu::BufferSize::new(PER_DRAW_SIZE),
+            },
+            count: None,
+        }],
+    })
+}
+
+/// Two mat4x4<f32>: model + view_proj.
+pub(crate) const PER_DRAW_SIZE: u64 = 128;

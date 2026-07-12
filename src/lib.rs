@@ -5,5 +5,7 @@ pub use common::{Color, Device, Filter, Frame, Renderer, RendraError, Surface, T
 
 pub mod raw;
 
+pub use glam;
+
 #[cfg(feature = "3d")]
 pub mod render3d;

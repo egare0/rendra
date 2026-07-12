@@ -1,114 +1,119 @@
-use crate::{Color, Device, RendraError, Surface, common::layouts::{camera_bind_group_layout, object_bind_group_layout}};
+use crate::common::layouts::{frame_globals_layout, per_draw_layout, PER_DRAW_SIZE};
+use crate::{Color, Device, RendraError, Surface};
+use bytemuck::{Pod, Zeroable};
 use std::cell::Cell;
 
-/// Maximum number of draw calls with distinct transforms per frame. Each
-/// draw claims one slot of the shared object uniform buffer via a dynamic
-/// offset; exceeding this returns an error instead of silently corrupting
-/// earlier draws in the same frame.
-pub(crate) const OBJECT_CAPACITY: u64 = 1024;
+/// Maximum number of draw calls per frame. Each draw claims one slot of
+/// the shared per-draw uniform buffer; exceeding this returns an error
+/// instead of silently overwriting earlier draws.
+pub(crate) const DRAW_CAPACITY: u64 = 1024;
 
-fn align_to(value: wgpu::BufferAddress, alignment: wgpu::BufferAddress) -> wgpu::BufferAddress {
+/// Raw light data as it lives in the frame-globals uniform buffer. This is
+/// plain bytes to `common` - the light types that fill it meaningfully
+/// live in `render3d`. Colors are premultiplied by intensity on the CPU.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, Pod, Zeroable)]
+pub(crate) struct LightsRaw {
+    /// rgb premultiplied by intensity, w unused.
+    pub ambient: [f32; 4],
+    /// xyz direction, w unused.
+    pub dir_direction: [f32; 4],
+    /// rgb premultiplied by intensity, w unused.
+    pub dir_color: [f32; 4],
+    /// xyz position, w = range.
+    pub point_position: [f32; 4],
+    /// rgb premultiplied by intensity, w unused.
+    pub point_color: [f32; 4],
+}
+
+fn align_to(value: u64, alignment: u64) -> u64 {
     value.div_ceil(alignment) * alignment
 }
 
-/// Owns per-frame draw orchestration: the camera and per-object uniform
-/// buffers, and opening/submitting each frame's command encoder.
-///
-/// A `Renderer` is bound to a `Device` at construction but takes a
-/// `Surface` on every call to `render`, so one `Renderer` can draw into as
-/// many windows as you have.
+/// Owns per-frame draw orchestration: the frame-globals and per-draw
+/// uniform buffers, and opening/submitting each frame's command encoder.
 pub struct Renderer {
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
-    camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
-    object_buffer: wgpu::Buffer,
-    object_bind_group: wgpu::BindGroup,
-    object_slot_size: wgpu::BufferAddress,
-    object_cursor: Cell<wgpu::BufferAddress>,
+    pub(crate) lights: LightsRaw,
+    lights_buffer: wgpu::Buffer,
+    frame_globals_bind_group: wgpu::BindGroup,
+    draw_buffer: wgpu::Buffer,
+    draw_bind_group: wgpu::BindGroup,
+    draw_slot_size: u64,
+    draw_cursor: Cell<u64>,
 }
 
 impl Renderer {
     /// Creates a renderer bound to `device`.
-    ///
-    /// This clones the device's inner wgpu handles - wgpu reference-counts
-    /// them internally, so this is cheap and safe to call more than once.
-    /// Also allocates the camera and per-object uniform buffers used by
-    /// every draw call.
     #[must_use]
     pub fn new(device: &Device) -> Self {
         let handle = &device.handle;
 
-        let camera_layout = camera_bind_group_layout(handle);
-        let camera_buffer = handle.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Rendra Camera Buffer"),
-            size: size_of::<glam::Mat4>() as wgpu::BufferAddress,
+        let lights_buffer = handle.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Rendra Lights Buffer"),
+            size: std::mem::size_of::<LightsRaw>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: false
         });
-        let camera_bind_group = handle.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Rendra Camera Bind Group"),
-            layout: &camera_layout,
+        let frame_globals_bind_group = handle.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Rendra Frame Globals Bind Group"),
+            layout: &frame_globals_layout(handle),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: camera_buffer.as_entire_binding(),
+                resource: lights_buffer.as_entire_binding()
             }]
         });
 
-        let alignment = handle.limits().min_uniform_buffer_offset_alignment as wgpu::BufferAddress;
-        let object_slot_size = align_to(size_of::<glam::Mat4>() as wgpu::BufferAddress, alignment);
-
-        let object_layout = object_bind_group_layout(handle);
-        let object_buffer = handle.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Rendra Object Buffer"),
-            size: object_slot_size * OBJECT_CAPACITY,
+        let alignment = handle.limits().min_uniform_buffer_offset_alignment as u64;
+        let draw_slot_size = align_to(PER_DRAW_SIZE, alignment);
+        let draw_buffer = handle.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Rendra Per-Draw Buffer"),
+            size: draw_slot_size * DRAW_CAPACITY,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+            mapped_at_creation: false
         });
-        let object_bind_group = handle.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Rendra Object Bind Group"),
-            layout: &object_layout,
+        let draw_bind_group = handle.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Rendra Per-Draw Bind Group"),
+            layout: &per_draw_layout(handle),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: &object_buffer,
+                    buffer: &draw_buffer,
                     offset: 0,
-                    size: wgpu::BufferSize::new(std::mem::size_of::<glam::Mat4>() as u64),
-                }),
-            }],
+                    size: wgpu::BufferSize::new(PER_DRAW_SIZE)
+                })
+            }]
         });
 
         Self {
             device: handle.clone(),
             queue: device.queue.clone(),
-            camera_buffer,
-            camera_bind_group,
-            object_buffer,
-            object_bind_group,
-            object_slot_size,
-            object_cursor: Cell::new(0),
+            lights: LightsRaw::default(),
+            lights_buffer,
+            frame_globals_bind_group,
+            draw_buffer,
+            draw_bind_group,
+            draw_slot_size,
+            draw_cursor: Cell::new(0),
         }
     }
 
     /// Draws one frame into `surface`.
     ///
     /// If `clear_color` is `Some`, the color target (and the depth buffer,
-    /// if the surface has one) is cleared before `draw` runs. Pass `None`
-    /// to draw over whatever the surface already holds.
-    ///
-    /// Opens a single render pass covering everything `draw` does against
-    /// the resulting [`Frame`], then submits and presents. Occluded or
-    /// timed-out frames are silently skipped, which happens naturally when
-    /// a window is minimized or being resized.
+    /// if the surface has one) is cleared before `draw` runs. Everything
+    /// `draw` does lands in a single render pass.
     pub fn render(&mut self, surface: &mut Surface, clear_color: Option<Color>, draw: impl FnOnce(&mut Frame<'_>) -> Result<(), RendraError>) -> Result<(), RendraError> {
-        self.object_cursor.set(0);
+        self.draw_cursor.set(0);
+        self.queue.write_buffer(&self.lights_buffer, 0, bytemuck::bytes_of(&self.lights));
 
         let surface_texture = match surface.handle.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(texture) => texture,
             wgpu::CurrentSurfaceTexture::Suboptimal(texture) => {
                 surface.handle.configure(&self.device, &surface.config);
                 texture
-            }
+            },
             wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
                 return Ok(());
             }
@@ -123,13 +128,13 @@ impl Renderer {
 
         let view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let depth_view = surface.depth_view().cloned();
-        let mut encoder =self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Rendra Command Encoder"),
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Rendra Command Encoder")
         });
 
         let (load, depth_load) = match clear_color {
             Some(color) => (wgpu::LoadOp::Clear(color.into()), wgpu::LoadOp::Clear(1.0)),
-            None => (wgpu::LoadOp::Load, wgpu::LoadOp::Load),
+            None => (wgpu::LoadOp::Load, wgpu::LoadOp::Load)
         };
 
         {
@@ -139,7 +144,7 @@ impl Renderer {
                     load: depth_load,
                     store: wgpu::StoreOp::Store
                 }),
-                stencil_ops: None,
+                stencil_ops: None
             });
 
             let pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -150,24 +155,25 @@ impl Renderer {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load,
-                        store: wgpu::StoreOp::Store,
-                    },
+                        store: wgpu::StoreOp::Store
+                    }
                 })],
                 depth_stencil_attachment,
                 timestamp_writes: None,
                 occlusion_query_set: None,
-                multiview_mask: None,
+                multiview_mask: None
             });
 
             let mut frame = Frame {
                 pass,
                 queue: &self.queue,
-                camera_buffer: &self.camera_buffer,
-                camera_bind_group: &self.camera_bind_group,
-                object_buffer: &self.object_buffer,
-                object_bind_group: &self.object_bind_group,
-                object_slot_size: self.object_slot_size,
-                object_cursor: &self.object_cursor,
+                frame_globals_bind_group: &self.frame_globals_bind_group,
+                draw_buffer: &self.draw_buffer,
+                draw_bind_group: &self.draw_bind_group,
+                draw_slot_size: self.draw_slot_size,
+                draw_cursor: &self.draw_cursor,
+                width: surface.width(),
+                height: surface.height()
             };
 
             draw(&mut frame)?;
@@ -180,19 +186,35 @@ impl Renderer {
     }
 }
 
-/// One frame's worth of drawing state: an open render pass, plus the
-/// shared camera and per-object GPU resources needed to issue draw calls
-/// into it.
+/// One frame's worth of drawing state: an open render pass plus the shared
+/// GPU resources draw calls record into.
 ///
-/// `common` doesn't know about meshes or materials - drawing them is added
-/// by `render3d`'s `Draw3D` trait, implemented for this type.
+/// `common` doesn't know about meshes or materials - `render3d` and
+/// `render2d` add drawing methods to this type.
 pub struct Frame<'a> {
     pub(crate) pass: wgpu::RenderPass<'a>,
     pub(crate) queue: &'a wgpu::Queue,
-    pub(crate) camera_buffer: &'a wgpu::Buffer,
-    pub(crate) camera_bind_group: &'a wgpu::BindGroup,
-    pub(crate) object_buffer: &'a wgpu::Buffer,
-    pub(crate) object_bind_group: &'a wgpu::BindGroup,
-    pub(crate) object_slot_size: wgpu::BufferAddress,
-    pub(crate) object_cursor: &'a Cell<wgpu::BufferAddress>,
+    pub(crate) frame_globals_bind_group: &'a wgpu::BindGroup,
+    pub(crate) draw_buffer: &'a wgpu::Buffer,
+    pub(crate) draw_bind_group: &'a wgpu::BindGroup,
+    pub(crate) draw_slot_size: u64,
+    pub(crate) draw_cursor: &'a Cell<u64>,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+}
+
+impl Frame<'_> {
+    /// Width in pixels of the surface this frame draws into.
+    #[inline]
+    #[must_use]
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Height in pixels of the surface this frame draws into.
+    #[inline]
+    #[must_use]
+    pub fn height(&self) -> u32 {
+        self.height
+    }
 }

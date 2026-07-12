@@ -9,12 +9,13 @@ mod renderer;
 mod error;
 mod color;
 mod texture;
-pub(crate) mod layouts;
+mod layouts;
 
 pub use device::Device;
 pub use surface::Surface;
 pub use renderer::{Frame, Renderer};
+pub(crate) use renderer::{LightsRaw, DRAW_CAPACITY};
+pub(crate) use layouts::{frame_globals_layout, per_draw_layout};
 pub use error::RendraError;
 pub use color::Color;
-pub use texture::{Filter, Texture, TextureBuilder};
-pub(crate) use renderer::OBJECT_CAPACITY;
+pub use texture::{Texture, TextureBuilder, Filter};
