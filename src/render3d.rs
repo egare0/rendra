@@ -5,7 +5,9 @@
 mod material;
 mod mesh;
 mod shader;
+mod viewport;
 
 pub use material::{Material, MaterialBuilder};
 pub use mesh::{Mesh, MeshBuilder, Vertex};
 pub use shader::{Shader, ShaderBuilder};
+pub use viewport::Viewport3D;
