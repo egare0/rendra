@@ -6,6 +6,7 @@ mod material;
 mod mesh;
 mod shader;
 mod viewport;
+mod draw;
 
 pub use material::{Material, MaterialBuilder};
 pub use mesh::{Mesh, MeshBuilder, Vertex};
